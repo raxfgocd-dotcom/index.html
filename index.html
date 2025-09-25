@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <title>Kalkulator IDR ke USD dengan Suara</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Consolas, monospace;
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      animation: slideShow 15s infinite;
+      color: #252525;
+    }
+
+    @keyframes slideShow {
+      0%   { background-image: url('math.jpg'); }
+      33%  { background-image: url('math2.jpg'); }
+      66%  { background-image: url('math3.jpg'); }
+      100% { background-image: url('math.jpg'); }
+    }
+
+    .calculator {
+      width: 400px;
+      margin: 50px auto;
+      border: 12px solid rgb(253, 228, 4);
+      border-radius: 5px;
+      padding: 10px;
+      background-color: rgba(75, 75, 74, 0.9);
+    }
+
+    .display {
+      width: 96%;
+      height: 40px;
+      margin-bottom: 5px;
+      text-align: right;
+      padding: 5px;
+      font-size: 20px;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+
+    #conversion-result {
+      text-align: right;
+      font-size: 14px;
+      color: green;
+      margin-bottom: 10px;
+    }
+
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-gap: 5px;
+    }
+
+    .button {
+      padding: 15px;
+      text-align: center;
+      font-size: 18px;
+      cursor: pointer;
+      background-color: rgb(241, 158, 2);
+      border: 1px solid rgb(223, 171, 3);
+      border-radius: 3px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      user-select: none;
+    }
+
+    .button span {
+      font-size: 12px;
+      color: #333;
+      text-transform: lowercase;
+      margin-top: 3px;
+    }
+
+    .button:hover {
+      background-color: rgb(255, 91, 26);
+    }
+
+    .history {
+      margin-top: 20px;
+      background-color: #ffaf02;
+      padding: 10px;
+      border: 1px solid rgb(249, 253, 6);
+      max-height: 150px;
+      overflow-y: auto;
+      font-size: 14px;
+    }
+
+    .history-title {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    @media (max-width: 500px) {
+      .calculator {
+        width: 95%;
+        margin: 20px auto;
+      }
+
+      .display {
+        font-size: 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<audio id="musik" autoplay loop muted>
+  <source src="wildflowers.mp3.mp3" type="audio/mpeg" />
+</audio>
+
+<div style="text-align: center; margin-bottom: 10px;">
+  <button onclick="document.getElementById('musik').play()">▶ Putar</button>
+  <button onclick="document.getElementById('musik').pause()">⏸ Jeda</button>
+  <button onclick="document.getElementById('musik').muted=false">🔊 Suara</button>
+  <button onclick="document.getElementById('musik').muted=true">🔇 Diamkan</button>
+  <button onclick="aktivasiSuara()" id="btnSuara" style="background: red; color: white; font-weight: bold;">🎤 AKTIFKAN SUARA</button>
+</div>
+
+<div class="calculator">
+  <input type="text" class="display" id="display" disabled />
+  <div id="conversion-result"></div>
+  <div class="buttons">
+    <div class="button" onclick="tekanTombol('7')">7<span>tujuh</span></div>
+    <div class="button" onclick="tekanTombol('8')">8<span>delapan</span></div>
+    <div class="button" onclick="tekanTombol('9')">9<span>sembilan</span></div>
+    <div class="button" onclick="tekanTombol('/')">/<span>bagi</span></div>
+    <div class="button" onclick="tekanTombol('4')">4<span>empat</span></div>
+    <div class="button" onclick="tekanTombol('5')">5<span>lima</span></div>
+    <div class="button" onclick="tekanTombol('6')">6<span>enam</span></div>
+    <div class="button" onclick="tekanTombol('*')">*<span>kali</span></div>
+    <div class="button" onclick="tekanTombol('1')">1<span>satu</span></div>
+    <div class="button" onclick="tekanTombol('2')">2<span>dua</span></div>
+    <div class="button" onclick="tekanTombol('3')">3<span>tiga</span></div>
+    <div class="button" onclick="tekanTombol('-')">-<span>kurang</span></div>
+    <div class="button" onclick="tekanTombol('0')">0<span>nol</span></div>
+    <div class="button" onclick="tekanTombol('.')">.<span>koma</span></div>
+    <div class="button" onclick="calculate()">=<span>sama dengan</span></div>
+    <div class="button" onclick="tekanTombol('+')">+<span>tambah</span></div>
+    <div class="button" onclick="clearDisplay()" style="grid-column: span 4;">C<span>hapus</span></div>
+  </div>
+  <div class="history" id="history">
+    <div class="history-title">Riwayat Perhitungan:</div>
+    <ul id="history-list"></ul>
+  </div>
+</div>
+
+<script>
+  const display = document.getElementById('display');
+  const historyList = document.getElementById('history-list');
+  const conversionResult = document.getElementById('conversion-result');
+  const kursDolar = 15500;
+
+  let rawInput = '';
+  let lastResult = null;
+  let suaraAktif = false;
+
+  function aktivasiSuara() {
+    const msg = new SpeechSynthesisUtterance('Suara sudah aktif');
+    msg.lang = 'id-ID';
+    msg.rate = 1.3;
+    msg.pitch = 1.1;
+    speechSynthesis.speak(msg);
+    
+    suaraAktif = true;
+    document.getElementById('btnSuara').style.background = 'green';
+    document.getElementById('btnSuara').innerHTML = '🎤 SUARA AKTIF ✓';
+  }
+
+  function tekanTombol(value) {
+    if (!suaraAktif) {
+      alert('Klik tombol AKTIFKAN SUARA dulu bro!');
+      return;
+    }
+    const kata = {
+      '0': 'nol', '1': 'satu', '2': 'dua', '3': 'tiga', '4': 'empat',
+      '5': 'lima', '6': 'enam', '7': 'tujuh', '8': 'delapan', '9': 'sembilan',
+      '+': 'tambah', '-': 'kurang', '*': 'kali', '/': 'bagi', '.': 'koma'
+    };
+    if (kata[value]) {
+      speechSynthesis.cancel();
+      const speakNow = new SpeechSynthesisUtterance(kata[value]);
+      speakNow.lang = 'id-ID';
+      speakNow.rate = 1.3;
+      speakNow.pitch = 1.2;
+      speechSynthesis.speak(speakNow);
+    }
+    if (/\d/.test(value)) {
+      rawInput += value;
+    } else {
+      rawInput += ' ' + value + ' ';
+    }
+    updateFormattedDisplay();
+    conversionResult.textContent = '';
+  }
+
+  function updateFormattedDisplay() {
+    const parts = rawInput.split(/([+\-*/])/g);
+    const formattedParts = parts.map(part => {
+      if (!isNaN(part.trim()) && part.trim() !== '') {
+        return parseFloat(part).toLocaleString('id-ID');
+      }
+      return part;
+    });
+    display.value = formattedParts.join(' ');
+  }
+
+  function clearDisplay() {
+    if (!suaraAktif) return;
+    speechSynthesis.cancel();
+    const msg = new SpeechSynthesisUtterance('hapus');
+    msg.lang = 'id-ID';
+    msg.rate = 1.3;
+    msg.pitch = 1.2;
+    speechSynthesis.speak(msg);
+    display.value = '';
+    conversionResult.textContent = '';
+    rawInput = '';
+    lastResult = null;
+  }
+
+  function angkaKeKata(n) {
+    const satuan = ["", "satu", "dua", "tiga", "empat", "lima", "enam", "tujuh", "delapan", "sembilan"];
+    const belasan = ["sepuluh", "sebelas", "dua belas", "tiga belas", "empat belas", "lima belas", "enam belas", "tujuh belas", "delapan belas", "sembilan belas"];
+    const puluhan = ["", "", "dua puluh", "tiga puluh", "empat puluh", "lima puluh", "enam puluh", "tujuh puluh", "delapan puluh", "sembilan puluh"];
+    const ribuan = ["", "ribu", "juta", "miliar", "triliun"];
+    if (n === 0) return "nol";
+    let kata = "";
+    let i = 0;
+    while (n > 0) {
+      let bagian = n % 1000;
+      if (bagian !== 0) {
+        let str = "";
+        let ratus = Math.floor(bagian / 100);
+        let sisa = bagian % 100;
+        if (ratus > 0) str += ratus === 1 ? "seratus " : satuan[ratus] + " ratus ";
+        if (sisa > 0) {
+          if (sisa < 10) str += satuan[sisa];
+          else if (sisa < 20) str += belasan[sisa - 10];
+          else str += puluhan[Math.floor(sisa / 10)] + " " + satuan[sisa % 10];
+        }
+        kata = str.trim() + " " + ribuan[i] + " " + kata;
+      }
+      n = Math.floor(n / 1000);
+      i++;
+    }
+    return kata.trim().replace(/\s+/g, " ");
+  }
+
+  // 🔊 Konversi desimal ke kata (untuk dolar)
+  function desimalKeKata(numString) {
+    const satuan = ["nol","satu","dua","tiga","empat","lima","enam","tujuh","delapan","sembilan"];
+    let [angka, desimal] = numString.split(".");
+    let hasil = angkaKeKata(parseInt(angka));
+    if (desimal) {
+      hasil += " koma ";
+      for (let d of desimal) hasil += satuan[parseInt(d)] + " ";
+    }
+    return hasil.trim();
+  }
+
+  function calculate() {
+    if (!suaraAktif) return;
+    speechSynthesis.cancel();
+    const msg = new SpeechSynthesisUtterance('sama dengan');
+    msg.lang = 'id-ID';
+    msg.rate = 1.2;
+    msg.pitch = 1.1;
+    speechSynthesis.speak(msg);
+    try {
+      const expression = rawInput.replace(/ /g, '');
+      const result = eval(expression);
+      if (isFinite(result)) {
+        addToHistory(display.value + ' = ' + result.toLocaleString('id-ID'));
+        rawInput = result.toString();
+        updateFormattedDisplay();
+        lastResult = result;
+        const dollarValue = (result / kursDolar).toFixed(2);
+        conversionResult.textContent = `💵 ${result.toLocaleString('id-ID')} IDR = $${dollarValue} USD`;
+        setTimeout(() => {
+          let angkaTerbilang = angkaKeKata(Math.floor(result));
+          const hasilMsg = new SpeechSynthesisUtterance(`Hasilnya adalah ${angkaTerbilang} rupiah`);
+          hasilMsg.lang = 'id-ID';
+          hasilMsg.rate = 1.1;
+          hasilMsg.pitch = 1.1;
+          speechSynthesis.speak(hasilMsg);
+        }, 800);
+        setTimeout(() => {
+          const dolarMsg = new SpeechSynthesisUtterance(`Atau sekitar ${desimalKeKata(dollarValue)} dolar Amerika`);
+          dolarMsg.lang = 'id-ID';
+          dolarMsg.rate = 1.1;
+          dolarMsg.pitch = 1.1;
+          speechSynthesis.speak(dolarMsg);
+        }, 2500);
+      } else {
+        display.value = "Tidak valid";
+        conversionResult.textContent = '';
+        rawInput = '';
+        lastResult = null;
+      }
+    } catch (error) {
+      display.value = "Error";
+      conversionResult.textContent = '';
+      rawInput = '';
+      lastResult = null;
+    }
+  }
+
+  function addToHistory(entry) {
+    const li = document.createElement('li');
+    li.textContent = entry;
+    historyList.prepend(li);
+  }
+</script>
+
+</body>
+</html>
